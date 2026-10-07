@@ -1,0 +1,673 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Freiheits-Tracker</title>
+  <style>
+    :root {
+      --bg: #0f172a;
+      --card: #1e293b;
+      --card-hover: #334155;
+      --accent: #10b981;  /* Sekunden - Grün */
+      --info: #3b82f6;    /* Minuten - Blau */
+      --warning: #f59e0b; /* Stunden - Orange */
+      --purple: #a855f7;  /* Tage - Violett */
+      --danger: #ef4444;
+      --text: #f8fafc;
+      --subtext: #94a3b8;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      background-color: var(--bg);
+      color: var(--text);
+      margin: 0;
+      padding: 32px 24px;
+      display: flex;
+      justify-content: center;
+      min-height: 100vh;
+      user-select: none;
+    }
+
+    /* Desktop Grid System */
+    .dashboard {
+      max-width: 1100px;
+      width: 100%;
+      display: grid;
+      grid-template-columns: 360px 1fr;
+      gap: 24px;
+    }
+
+    .column-left, .column-right {
+      display: flex;
+      flex-direction: column;
+      gap: 24px;
+    }
+
+    .card {
+      background: var(--card);
+      padding: 24px;
+      border-radius: 24px;
+      box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.3);
+      border: 1px solid rgba(255, 255, 255, 0.05);
+    }
+
+    .header-card {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .coins-badge {
+      background: rgba(245, 158, 11, 0.15);
+      color: var(--warning);
+      padding: 10px 20px;
+      border-radius: 20px;
+      font-weight: bold;
+      font-size: 20px;
+      border: 1px solid var(--warning);
+    }
+
+    /* Kreis-Uhr Desktop Design */
+    .timer-card {
+      text-align: center;
+      background: linear-gradient(145deg, #1e293b, #0f172a);
+      border: 2px solid #334155;
+      cursor: pointer;
+      transition: transform 0.2s, border-color 0.2s;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+    .timer-card:hover {
+      border-color: var(--accent);
+      transform: translateY(-2px);
+    }
+
+    .rings-wrapper {
+      position: relative;
+      width: 260px;
+      height: 260px;
+      margin: 20px 0;
+    }
+
+    .rings-wrapper svg {
+      transform: rotate(-225deg); /* Richtet das 3/4-Segment symmetrisch aus */
+      width: 100%;
+      height: 100%;
+    }
+
+    .ring-bg {
+      fill: none;
+      stroke: #1e293b;
+      stroke-linecap: round;
+    }
+
+    .ring-fill {
+      fill: none;
+      stroke-linecap: round;
+      transition: stroke-dashoffset 0.3s ease, opacity 0.2s ease;
+      opacity: 0; /* Default 0: erst sichtbar wenn > 0 */
+    }
+
+    .ring-sec { stroke: var(--accent); }
+    .ring-min { stroke: var(--info); }
+    .ring-hrs { stroke: var(--warning); }
+    .ring-day { stroke: var(--purple); }
+
+    .timer-center-text {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+    }
+
+    .center-val {
+      font-size: 34px;
+      font-weight: 800;
+      color: var(--text);
+    }
+
+    .center-unit {
+      font-size: 13px;
+      color: var(--subtext);
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+
+    button {
+      border: none;
+      padding: 16px;
+      border-radius: 16px;
+      font-size: 16px;
+      font-weight: 700;
+      cursor: pointer;
+      width: 100%;
+      transition: transform 0.1s, opacity 0.2s, background-color 0.2s;
+    }
+    button:hover { opacity: 0.95; }
+    button:active { transform: scale(0.98); }
+
+    .btn-panic { 
+      background: var(--danger); 
+      color: white; 
+      font-size: 18px; 
+      box-shadow: 0 4px 20px rgba(239, 68, 68, 0.4); 
+    }
+    
+    .btn-reset { 
+      background: rgba(239, 68, 68, 0.1); 
+      color: var(--danger); 
+      font-size: 14px; 
+      margin-top: 12px; 
+      border: 1px solid rgba(239, 68, 68, 0.3); 
+    }
+
+    /* Kalender Grid (Größer für Desktop) */
+    .calendar-grid {
+      display: grid;
+      grid-template-columns: repeat(7, 1fr);
+      gap: 10px;
+      margin-top: 16px;
+    }
+
+    .cal-day {
+      aspect-ratio: 1;
+      background: #334155;
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 14px;
+      font-weight: bold;
+      cursor: pointer;
+      transition: transform 0.15s, background-color 0.2s;
+    }
+    .cal-day:hover { transform: scale(1.08); }
+    .cal-day.done { background: var(--accent); color: white; }
+    .cal-day.failed { background: var(--danger); color: white; }
+    .cal-day.today { border: 2px solid white; }
+
+    /* Shop Grid (2-Spaltig auf Desktop) */
+    .shop-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+      margin-top: 12px;
+    }
+
+    .shop-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 12px 16px;
+      background: #0f172a;
+      border-radius: 16px;
+      border: 1px solid #334155;
+    }
+
+    .item-icon { font-size: 28px; margin-right: 12px; }
+    .item-info { text-align: left; }
+
+    .btn-buy {
+      width: auto;
+      padding: 10px 16px;
+      font-size: 14px;
+      background: var(--warning);
+      color: #000;
+      border-radius: 12px;
+    }
+    .btn-buy:disabled { background: #475569; color: #94a3b8; cursor: not-allowed; }
+
+    /* Virtuelle Insel View */
+    .island-view {
+      background: linear-gradient(180deg, #38bdf8, #0284c7);
+      border-radius: 20px;
+      padding: 32px 20px;
+      min-height: 140px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 20px;
+      align-items: center;
+      justify-content: center;
+      box-shadow: inset 0 2px 15px rgba(0,0,0,0.25);
+    }
+
+    .animated-item {
+      font-size: 44px;
+      display: inline-block;
+      animation: float 3s ease-in-out infinite alternate, popIn 0.5s ease-out;
+    }
+    .animated-item:nth-child(even) { animation-delay: 1.5s; }
+
+    @keyframes float {
+      0% { transform: translateY(0px) rotate(0deg); }
+      100% { transform: translateY(-10px) rotate(4deg); }
+    }
+    @keyframes popIn {
+      0% { transform: scale(0); opacity: 0; }
+      100% { transform: scale(1); opacity: 1; }
+    }
+
+    /* Modal / Popups */
+    .modal {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.8);
+      backdrop-filter: blur(4px);
+      padding: 20px;
+      justify-content: center;
+      align-items: center;
+      z-index: 100;
+    }
+
+    .modal-content {
+      background: var(--card);
+      padding: 32px;
+      border-radius: 24px;
+      max-width: 440px;
+      width: 100%;
+      text-align: center;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .breath-circle {
+      width: 120px;
+      height: 120px;
+      background: var(--accent);
+      border-radius: 50%;
+      margin: 24px auto;
+      transition: transform 4s ease-in-out;
+    }
+    .breath-circle.expand { transform: scale(1.6); }
+
+    /* Responsive Fallback für kleine Schirme */
+    @media (max-width: 850px) {
+      .dashboard { grid-template-columns: 1fr; }
+      .shop-grid { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+
+<div class="dashboard">
+  
+  <!-- Linke Spalte: Uhr & Panik -->
+  <div class="column-left">
+    
+    <!-- Header mit Coins -->
+    <div class="card header-card">
+      <h2 style="margin:0; font-size: 22px;">🛡️ Freiheits-Tracker</h2>
+      <div class="coins-badge">🪙 <span id="coin-count">0</span></div>
+    </div>
+
+    <!-- Kreis-Uhr Karte -->
+    <div class="card timer-card" onclick="openTimeDetails()">
+      <span style="font-size: 13px; color: var(--subtext); text-transform: uppercase; letter-spacing: 1px; font-weight: 600;">Deine suchtfreie Zeit</span>
+      
+      <div class="rings-wrapper">
+        <svg viewBox="0 0 220 220">
+          <!-- Tage Ring (Aussen: r=95, Umfang = 596.9) -->
+          <circle class="ring-bg" cx="110" cy="110" r="95" stroke-width="8" stroke-dasharray="596.9" stroke-dashoffset="149.2"/>
+          <circle class="ring-fill ring-day" id="ring-day" cx="110" cy="110" r="95" stroke-width="8" stroke-dasharray="596.9" stroke-dashoffset="596.9"/>
+
+          <!-- Stunden Ring (r=78, Umfang = 490.1) -->
+          <circle class="ring-bg" cx="110" cy="110" r="78" stroke-width="8" stroke-dasharray="490.1" stroke-dashoffset="122.5"/>
+          <circle class="ring-fill ring-hrs" id="ring-hrs" cx="110" cy="110" r="78" stroke-width="8" stroke-dasharray="490.1" stroke-dashoffset="490.1"/>
+
+          <!-- Minuten Ring (r=61, Umfang = 383.3) -->
+          <circle class="ring-bg" cx="110" cy="110" r="61" stroke-width="8" stroke-dasharray="383.3" stroke-dashoffset="95.8"/>
+          <circle class="ring-fill ring-min" id="ring-min" cx="110" cy="110" r="61" stroke-width="8" stroke-dasharray="383.3" stroke-dashoffset="383.3"/>
+
+          <!-- Sekunden Ring (Innen: r=44, Umfang = 276.5) -->
+          <circle class="ring-bg" cx="110" cy="110" r="44" stroke-width="8" stroke-dasharray="276.5" stroke-dashoffset="69.1"/>
+          <circle class="ring-fill ring-sec" id="ring-sec" cx="110" cy="110" r="44" stroke-width="8" stroke-dasharray="276.5" stroke-dashoffset="276.5"/>
+        </svg>
+
+        <div class="timer-center-text">
+          <div class="center-val" id="center-val">0s</div>
+          <div class="center-unit" id="center-unit">suchtfrei</div>
+        </div>
+      </div>
+
+      <span style="font-size: 13px; color: var(--subtext);">Tippe für genaue Aufschlüsselung 📊</span>
+    </div>
+
+    <!-- Buttons -->
+    <div>
+      <button class="btn-panic" onclick="triggerPanic()">🚨 PANIK BUTTON (Drück mich!)</button>
+      <button class="btn-reset" onclick="resetStreak()">Rückfall eintragen (Neustart)</button>
+    </div>
+
+  </div>
+
+  <!-- Rechte Spalte: Insel, Kalender, Shop -->
+  <div class="column-right">
+    
+    <!-- Virtuelle Insel -->
+    <div class="card">
+      <h3 style="margin-top:0;">🏝️ Deine Zufluchts-Insel</h3>
+      <div class="island-view" id="island-display">
+        <span style="font-size: 15px; color: #e0f2fe;">Noch leer. Kaufe Upgrades im Shop!</span>
+      </div>
+    </div>
+
+    <!-- Kalender -->
+    <div class="card">
+      <h3 style="margin-top:0; margin-bottom: 4px;">📅 Monats-Übersicht</h3>
+      <p style="font-size: 13px; color: var(--subtext); margin-top: 0;">Klicke auf einen Tag, um den Status zu ändern (Grün / Rot / Grau).</p>
+      <div class="calendar-grid" id="calendar-grid"></div>
+    </div>
+
+    <!-- Shop -->
+    <div class="card">
+      <h3 style="margin-top:0;">🛒 Insel-Shop (Investieren)</h3>
+      <div class="shop-grid" id="shop-items"></div>
+    </div>
+
+  </div>
+
+</div>
+
+<!-- Zeit Detail Modal -->
+<div class="modal" id="details-modal">
+  <div class="modal-content">
+    <h3 style="margin-top:0; color: var(--accent);">📊 Suchtfreie Zeit im Detail</h3>
+    <div id="time-breakdown-text" style="font-size: 16px; line-height: 1.8; margin: 24px 0; text-align: left; background: #0f172a; padding: 20px; border-radius: 16px;"></div>
+    <button onclick="closeModal('details-modal')">Schließen</button>
+  </div>
+</div>
+
+<!-- Panik Modal -->
+<div class="modal" id="panic-modal">
+  <div class="modal-content">
+    <h2 style="color: var(--danger); margin-top:0;">🛑 Stopp! Halte kurz inne.</h2>
+    <p id="panic-text" style="font-size: 18px; line-height: 1.5; margin: 20px 0;"></p>
+    <div class="breath-circle" id="breath-circle" style="display:none;"></div>
+    <p id="breath-label" style="font-weight: bold; color: var(--accent); font-size: 18px;"></p>
+    <button onclick="closePanic()" style="background: var(--card); border: 1px solid var(--subtext); color: white; margin-top: 15px;">Ich bleibe stark!</button>
+  </div>
+</div>
+
+<script>
+  let startTime = parseInt(localStorage.getItem('startTime') || Date.now());
+  let coins = parseInt(localStorage.getItem('coins') || '0');
+  let dayStates = JSON.parse(localStorage.getItem('dayStates') || '{}');
+  let inventory = JSON.parse(localStorage.getItem('inventory') || '[]');
+  let lastCoinPayout = parseInt(localStorage.getItem('lastCoinPayout') || '0');
+
+  if (!localStorage.getItem('startTime')) {
+    localStorage.setItem('startTime', startTime);
+  }
+
+  const shopCatalog = [
+    { id: 'fire', name: 'Lagerfeuer', cost: 20, icon: '🔥' },
+    { id: 'tent', name: 'Gemütliches Zelt', cost: 50, icon: '⛺' },
+    { id: 'palm', name: 'Kokospalme', cost: 100, icon: '🌴' },
+    { id: 'dog', name: 'Insel-Hund', cost: 250, icon: '🐕' },
+    { id: 'house', name: 'Holzhütte', cost: 500, icon: '🏡' },
+    { id: 'solar', name: 'Solaranlage', cost: 1000, icon: '☀️' }
+  ];
+
+  const panicPrompts = [
+    "Was wirst du in 1 Stunde über diese Entscheidung denken?",
+    "Welches Gefühl versuchst du gerade zu betäuben?",
+    "Der Drang dauert meistens nur 10 bis 15 Minuten. Kannst du noch 5 Minuten warten?",
+    "Morgen wirst du extrem stolz auf dich sein, dass du heute 'Nein' gesagt hast.",
+    "Was ist das Wichtigste, was du gewinnst, wenn du JETZT stark bleibst?",
+    "Stell dir vor, du hast diesen Moment überstanden: Wie fühlt sich dieser Sieg an?",
+    "Ist dieser kurze Moment des Nachgebens all deine bisherige Mühe wert?",
+    "Steh sofort auf und trinke ein großes Glas eiskaltes Wasser!",
+    "Erinnere dich an den Hauptgrund, warum du aufhören wolltest.",
+    "Rückfälle lösen keine Probleme – sie erzeugen nur neue."
+  ];
+
+  // Präzisions-Funktion für 3/4 Kreise
+  function setRingProgress(elementId, currentVal, maxVal, circumference) {
+    const el = document.getElementById(elementId);
+    if (!el) return;
+
+    // Wenn Wert 0 ist, Ring komplett ausblenden
+    if (currentVal <= 0) {
+      el.style.opacity = '0';
+      el.style.strokeDashoffset = circumference;
+      return;
+    }
+
+    // Wenn > 0, einblenden und 3/4 Segment berechnen
+    el.style.opacity = '1';
+    const arcLength = circumference * 0.75;
+    const progress = Math.min(currentVal / maxVal, 1);
+    const offset = circumference - (progress * arcLength);
+    el.style.strokeDashoffset = offset;
+  }
+
+  function updateTimer() {
+    const diff = Math.floor((Date.now() - startTime) / 1000);
+
+    const seconds = diff % 60;
+    const minutes = Math.floor(diff / 60) % 60;
+    const hours = Math.floor(diff / 3600) % 24;
+    const days = Math.floor(diff / 86400);
+
+    // Exakte Umfänge (2 * PI * r)
+    setRingProgress('ring-sec', seconds, 60, 276.5);
+    setRingProgress('ring-min', minutes, 60, 383.3);
+    setRingProgress('ring-hrs', hours, 24, 490.1);
+    setRingProgress('ring-day', days, 30, 596.9); // Baut sich auf bis 30 Tage
+
+    // Dynamischer Center Text
+    let mainText = "";
+    if (days > 0) {
+      mainText = `${days}d ${hours}h`;
+    } else if (hours > 0) {
+      mainText = `${hours}h ${minutes}m`;
+    } else if (minutes > 0) {
+      mainText = `${minutes}m ${seconds}s`;
+    } else {
+      mainText = `${seconds}s`;
+    }
+    document.getElementById('center-val').innerText = mainText;
+
+    // Kalender automatisch aktualisieren
+    const todayKey = getTodayKey();
+    if (!dayStates[todayKey]) {
+      dayStates[todayKey] = 'done';
+    }
+
+    // Münzen-Belohnung pro Tag
+    if (days > lastCoinPayout) {
+      const reward = 10 + (days * 5);
+      coins += reward;
+      lastCoinPayout = days;
+      localStorage.setItem('lastCoinPayout', lastCoinPayout);
+      alert(`🎉 Neuer Tag geschafft! +${reward} Münzen erhalten!`);
+    }
+
+    updateUI();
+  }
+
+  function getTodayKey() {
+    const now = new Date();
+    const monthStr = String(now.getMonth() + 1).padStart(2, '0');
+    const dayStr = String(now.getDate()).padStart(2, '0');
+    return `${now.getFullYear()}-${monthStr}-${dayStr}`;
+  }
+
+  function openTimeDetails() {
+    const diff = Math.floor((Date.now() - startTime) / 1000);
+    const seconds = diff % 60;
+    const minutes = Math.floor(diff / 60) % 60;
+    const hours = Math.floor(diff / 3600) % 24;
+    const days = Math.floor(diff / 86400);
+
+    const text = `
+      • <b>Tage:</b> ${days}<br>
+      • <b>Stunden:</b> ${hours}<br>
+      • <b>Minuten:</b> ${minutes}<br>
+      • <b>Sekunden:</b> ${seconds}<br><br>
+      <small style="color:var(--subtext)">Gesamte suchtfreie Zeit: ${diff.toLocaleString()} Sekunden.</small>
+    `;
+    document.getElementById('time-breakdown-text').innerHTML = text;
+    document.getElementById('details-modal').style.display = 'flex';
+  }
+
+  function resetStreak() {
+    if (confirm("Möchtest du wirklich einen Rückfall eintragen? Lass den Kopf nicht hängen – jeder Neuanfang zählt!")) {
+      startTime = Date.now();
+      localStorage.setItem('startTime', startTime);
+      dayStates[getTodayKey()] = 'failed';
+      updateUI();
+    }
+  }
+
+  function toggleDayState(dateKey) {
+    if (dayStates[dateKey] === 'done') {
+      dayStates[dateKey] = 'failed';
+    } else if (dayStates[dateKey] === 'failed') {
+      delete dayStates[dateKey];
+    } else {
+      dayStates[dateKey] = 'done';
+    }
+    updateUI();
+  }
+
+  function updateUI() {
+    document.getElementById('coin-count').innerText = coins;
+    
+    localStorage.setItem('coins', coins);
+    localStorage.setItem('dayStates', JSON.stringify(dayStates));
+    localStorage.setItem('inventory', JSON.stringify(inventory));
+
+    renderIsland();
+    renderCalendar();
+    renderShop();
+  }
+
+  function renderIsland() {
+    const display = document.getElementById('island-display');
+    if (inventory.length === 0) {
+      display.innerHTML = '<span style="font-size: 15px; color: #e0f2fe;">Noch leer. Kaufe Upgrades im Shop!</span>';
+      return;
+    }
+    display.innerHTML = inventory.map(item => `<span class="animated-item" title="${item.name}">${item.icon}</span>`).join(' ');
+  }
+
+  function renderShop() {
+    const shopDiv = document.getElementById('shop-items');
+    shopDiv.innerHTML = shopCatalog.map(item => {
+      const owned = inventory.some(i => i.id === item.id);
+      return `
+        <div class="shop-item">
+          <div style="display:flex; align-items:center;">
+            <span class="item-icon">${item.icon}</span>
+            <div class="item-info">
+              <strong>${item.name}</strong><br>
+              <small style="color:var(--subtext)">${owned ? 'Gekauft' : item.cost + ' Münzen'}</small>
+            </div>
+          </div>
+          <button class="btn-buy" ${owned || coins < item.cost ? 'disabled' : ''} onclick="buyItem('${item.id}')">
+            ${owned ? 'Gekauft' : 'Kaufen'}
+          </button>
+        </div>
+      `;
+    }).join('');
+  }
+
+  function buyItem(itemId) {
+    const item = shopCatalog.find(i => i.id === itemId);
+    if (item && coins >= item.cost) {
+      coins -= item.cost;
+      inventory.push(item);
+      updateUI();
+    }
+  }
+
+  function renderCalendar() {
+    const grid = document.getElementById('calendar-grid');
+    grid.innerHTML = '';
+    
+    const now = new Date();
+    const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
+    const todayNum = now.getDate();
+
+    for (let i = 1; i <= daysInMonth; i++) {
+      const dayDiv = document.createElement('div');
+      dayDiv.className = 'cal-day';
+      
+      const monthStr = String(now.getMonth() + 1).padStart(2, '0');
+      const dayStr = String(i).padStart(2, '0');
+      const dateKey = `${now.getFullYear()}-${monthStr}-${dayStr}`;
+
+      if (dayStates[dateKey] === 'done') {
+        dayDiv.classList.add('done');
+      } else if (dayStates[dateKey] === 'failed') {
+        dayDiv.classList.add('failed');
+      }
+
+      if (i === todayNum) {
+        dayDiv.classList.add('today');
+      }
+
+      dayDiv.innerText = i;
+      dayDiv.onclick = () => toggleDayState(dateKey);
+      grid.appendChild(dayDiv);
+    }
+  }
+
+  let breathInterval;
+  function triggerPanic() {
+    const modal = document.getElementById('panic-modal');
+    const textEl = document.getElementById('panic-text');
+    const circle = document.getElementById('breath-circle');
+    const label = document.getElementById('breath-label');
+    
+    modal.style.display = 'flex';
+    
+    if (Math.random() < 0.15) {
+      textEl.innerText = "Nimm dir 30 Sekunden Zeit und konzentriere dich nur auf deinen Atem:";
+      circle.style.display = 'block';
+      
+      let step = 0;
+      const runBreath = () => {
+        if (step % 2 === 0) {
+          circle.classList.add('expand');
+          label.innerText = "Einatmen... (4s)";
+        } else {
+          circle.classList.remove('expand');
+          label.innerText = "Ausatmen... (4s)";
+        }
+        step++;
+      };
+      runBreath();
+      breathInterval = setInterval(runBreath, 4000);
+    } else {
+      circle.style.display = 'none';
+      label.innerText = '';
+      textEl.innerText = panicPrompts[Math.floor(Math.random() * panicPrompts.length)];
+    }
+  }
+
+  function closePanic() {
+    document.getElementById('panic-modal').style.display = 'none';
+    if (breathInterval) clearInterval(breathInterval);
+  }
+
+  function closeModal(id) {
+    document.getElementById(id).style.display = 'none';
+  }
+
+  setInterval(updateTimer, 1000);
+  updateTimer();
+</script>
+
+</body>
+</html>
