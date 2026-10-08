@@ -398,15 +398,20 @@
 </div>
 
 <script>
-  let startTime = parseInt(localStorage.getItem('startTime') || Date.now());
-  let coins = parseInt(localStorage.getItem('coins') || '0');
-  let dayStates = JSON.parse(localStorage.getItem('dayStates') || '{}');
-  let inventory = JSON.parse(localStorage.getItem('inventory') || '[]');
-  let lastCoinPayout = parseInt(localStorage.getItem('lastCoinPayout') || '0');
+// ✅ NEU (Speichert die Zeit dauerhaft)
+let savedStartTime = localStorage.getItem('startTime');
 
-  if (!localStorage.getItem('startTime')) {
-    localStorage.setItem('startTime', startTime);
-  }
+if (!savedStartTime) {
+  // Nur beim ALLERERSTEN Aufruf überhaupt wird die Zeit auf JETZT gesetzt
+  savedStartTime = Date.now();
+  localStorage.setItem('startTime', savedStartTime);
+}
+
+let startTime = parseInt(savedStartTime);
+let coins = parseInt(localStorage.getItem('coins') || '0');
+let dayStates = JSON.parse(localStorage.getItem('dayStates') || '{}');
+let inventory = JSON.parse(localStorage.getItem('inventory') || '[]');
+let lastCoinPayout = parseInt(localStorage.getItem('lastCoinPayout') || '0');
 
   const shopCatalog = [
     { id: 'fire', name: 'Lagerfeuer', cost: 20, icon: '🔥' },
